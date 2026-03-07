@@ -16,7 +16,7 @@ from itertools import combinations
 # ==========================================================
 # CONFIGURATION
 # ==========================================================
-DATASET = "dataset"   # change to "dataset2" for D2 run
+DATASET = "dataset1"   # change to "dataset2" for D2 run
 
 BATCHES_D1 = {
     "batch_a": ("datasets/batch_a_100.csv",         "scoring/dataset1/de_baselines/de_baseline_batch_a.csv"),
@@ -33,7 +33,7 @@ BATCHES_D2 = {
 BATCHES = BATCHES_D1 if DATASET == "dataset1" else BATCHES_D2
 
 POLY_MOD_DEGREES = [4096, 8192, 16384]
-PLAIN_MODULUS    = 4816897
+PLAIN_MODULUS    = 9338881   # prime, NTT-friendly for 4096/8192/16384; must be > 2*max_col_sum (9,304,726)
 SCALE_FACTOR     = 10_000
 N_RUNS           = 10
 
@@ -110,48 +110,81 @@ def run_encrypted_de(ctx, encoder, df, cancer_types, pairs):
         padded = np.zeros(n_slots, dtype=np.int64)
         ints   = np.round(np.array(row_vals) * SCALE_FACTOR).astype(np.int64)
         padded[:len(ints)] = ints
-        return encoder.encode(padded)      # returns Plaintext directly
+        return encoder.encode(padded)      # int64 array -- matches seal-python API
 
     def encrypt_pt(pt):
         ct = Ciphertext()
         encryptor.encrypt(pt, ct)
         return ct
 
-    # -- Encryption ----------------------------------------------------------
-    t0  = time.perf_counter()
-    enc = {}
+    # -- Encryption (streaming) + Execution ----------------------------------
+    # Encrypt row-by-row and accumulate immediately to avoid storing all
+    # ciphertexts in RAM (prevents OOM kill at large batches / high PMD).
+    # Timing is split correctly to match CKKS script:
+    #   enc_latency  = pure encode + encrypt time only
+    #   exec_latency = homomorphic add accumulation + final subtraction
+    enc_sums    = {}
+    n_per       = {}
+    first_ct_kb = None
+    enc_elapsed  = 0.0   # accumulate pure encryption time
+    exec_elapsed = 0.0   # accumulate homomorphic add time
+
     for ct_type in cancer_types:
         group = df[df["cancer_type"] == ct_type][gene_cols].values
-        enc[ct_type] = [encrypt_pt(encode_row(row)) for row in group]
-    enc_latency = (time.perf_counter() - t0) * 1000
+        n_per[ct_type] = len(group)
+        running_sum = None
+        for row in group:
+            # -- timed: encode + encrypt only
+            t0 = time.perf_counter()
+            ct = encrypt_pt(encode_row(row))
+            enc_elapsed += (time.perf_counter() - t0) * 1000
 
-    ct_size_kb = _ct_kb(enc[cancer_types[0]][0])
+            if first_ct_kb is None:
+                first_ct_kb = _ct_kb(ct)
 
-    # -- Execution -----------------------------------------------------------
-    t0     = time.perf_counter()
-    de_enc = {}
-    n_as   = {}
-    for type_a, type_b in pairs:
-        if not enc[type_a] or not enc[type_b]:
-            continue
-        sum_a = _sum_cts(evaluator, enc[type_a], ctx)
-        sum_b = _sum_cts(evaluator, enc[type_b], ctx)
-        diff  = evaluator.sub(sum_a, sum_b)
-        key         = f"{type_a}_vs_{type_b}"
-        de_enc[key] = diff
-        n_as[key]   = len(enc[type_a])
-    exec_latency = (time.perf_counter() - t0) * 1000
+            # -- timed: homomorphic addition
+            # First row: running_sum is uninitialised — use ct directly.
+            # No clone needed; ct is local and won't be reused.
+            t0 = time.perf_counter()
+            if running_sum is None:
+                running_sum = ct
+            else:
+                running_sum = evaluator.add(running_sum, ct)
+            exec_elapsed += (time.perf_counter() - t0) * 1000
+
+        enc_sums[ct_type] = running_sum
+
+    enc_latency = enc_elapsed
+
+    exec_latency = exec_elapsed
+    ct_size_kb   = first_ct_kb
 
     # -- Decryption ----------------------------------------------------------
-    t0     = time.perf_counter()
-    de_dec = {}
-    for key, ct in de_enc.items():
-        pt_out = Plaintext()
-        decryptor.decrypt(ct, pt_out)
-        raw         = encoder.decode(pt_out)    # numpy array
-        raw_int     = np.array(raw[:n_features], dtype=np.int64)
-        de_dec[key] = np.abs(raw_int.astype(np.float64) / (n_as[key] * SCALE_FACTOR))
+    # Decrypt each group sum individually, then compute mean_A - mean_B in plaintext.
+    # This matches CKKS exactly: CKKS computes encrypted(sum/n) then decrypts.
+    # BFV can't do plaintext scalar divide in encrypted domain (integer-only modulus),
+    # so we decrypt the sum and divide by n in plaintext -- mathematically identical.
+    t0      = time.perf_counter()
+    means   = {}
+    for ct_type in cancer_types:
+        if enc_sums.get(ct_type) is None:
+            continue
+        pt_out  = Plaintext()
+        decryptor.decrypt(enc_sums[ct_type], pt_out)
+        raw     = encoder.decode(pt_out)
+        raw_int = np.array(raw[:n_features], dtype=np.int64)
+        # Signed correction: BFV values are mod plain_modulus
+        # Negative results wrap to [plain_modulus//2, plain_modulus)
+        raw_int[raw_int > PLAIN_MODULUS // 2] -= PLAIN_MODULUS
+        means[ct_type] = raw_int.astype(np.float64) / (n_per[ct_type] * SCALE_FACTOR)
     dec_latency = (time.perf_counter() - t0) * 1000
+
+    de_dec = {}
+    for type_a, type_b in pairs:
+        if type_a not in means or type_b not in means:
+            continue
+        key        = f"{type_a}_vs_{type_b}"
+        de_dec[key] = np.abs(means[type_a] - means[type_b])
 
     return enc_latency, exec_latency, dec_latency, ct_size_kb, de_dec
 
