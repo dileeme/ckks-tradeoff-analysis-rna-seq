@@ -16,7 +16,7 @@ from itertools import combinations
 # ==========================================================
 # CONFIGURATION
 # ==========================================================
-DATASET = "dataset1"   # change to "dataset2" for D2 run
+DATASET = "dataset"   # change to "dataset2" for D2 run
 
 BATCHES_D1 = {
     "batch_a": ("datasets/batch_a_100.csv",         "scoring/dataset1/de_baselines/de_baseline_batch_a.csv"),
@@ -33,7 +33,7 @@ BATCHES_D2 = {
 BATCHES = BATCHES_D1 if DATASET == "dataset1" else BATCHES_D2
 
 POLY_MOD_DEGREES = [4096, 8192, 16384]
-PLAIN_MODULUS    = 786433
+PLAIN_MODULUS    = 4816897
 SCALE_FACTOR     = 10_000
 N_RUNS           = 10
 
