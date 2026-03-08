@@ -112,29 +112,48 @@ All metrics averaged across 10 runs and reported with ±1 standard deviation. To
 ## 📁 Project Structure
 
 ```
-ckks-tradeoff-analysis-rna-seq/
+project-root/
 │
 ├── datasets/
-│   ├── data.csv                        # Raw expression matrix (801×20531)
-│   ├── labels.csv                      # Cancer type labels
-│   ├── batch_a_100.csv                 # 100 samples, preprocessed
-│   ├── batch_b_400.csv                 # 400 samples
-│   ├── batch_c_801.csv                 # 801 samples (full Dataset 1)
+│   ├── batch_a_100.csv
+│   ├── batch_b_400.csv
+│   ├── batch_c_801.csv
+│   ├── dataset2_batch_a_100.csv
+│   ├── dataset2_batch_b_400.csv
+│   ├── dataset2_batch_c_1129.csv
+│   ├── data.csv
+│   ├── labels.csv
 │   └── de_baselines/
-│       ├── de_baseline_batch_a.csv     # Plaintext DE scores — batch A
-│       ├── de_baseline_batch_b.csv     # Plaintext DE scores — batch B
-│       └── de_baseline_batch_c.csv     # Plaintext DE scores — batch C
+│       ├── de_baseline_batch_a.csv
+│       ├── de_baseline_batch_b.csv
+│       ├── de_baseline_batch_c.csv
+│       ├── de_baseline_dataset2_batch_a.csv
+│       ├── de_baseline_dataset2_batch_b.csv
+│       └── de_baseline_dataset2_batch_c.csv
 │
 ├── experiments/
-│   ├── phase3_ckks_de.py               # CKKS experiment script
-│   └── phase3_bfv_de.py                # BFV experiment script
+│   ├── phase3_ckks_de.py
+│   └── phase3_bfv_de.py
 │
-└── results/
-    ├── phase3_ckks_dataset1.csv        # CKKS results — Dataset 1
-    ├── phase3_ckks_dataset2.csv        # CKKS results — Dataset 2
-    ├── phase3_bfv_dataset1.csv         # BFV results — Dataset 1
-    └── phase3_bfv_dataset2.csv         # BFV results — Dataset 2
-```
+├── figures/
+│   ├── plot1_enc_latency.png
+│   ├── plot2_exec_latency.png
+│   ├── plot3_ct_size.png
+│   ├── plot4_total_latency.png
+│   └── plot5_mae.png
+│
+├── results/
+│   ├── phase3_ckks_dataset1.csv
+│   ├── phase3_ckks_dataset2.csv
+│   ├── phase3_bfv_dataset1.csv
+│   └── phase3_bfv_dataset2.csv
+│
+├── manuscript/
+│   ├── sn-article.tex
+│   ├── sn-article.pdf
+│   └── sn-bibliography.bib
+│
+└── README.md
 
 ---
 
