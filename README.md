@@ -111,7 +111,7 @@ All metrics averaged across 10 runs and reported with ±1 standard deviation. To
 
 ## 📁 Project Structure
 
-```
+
 project-root/
 │
 ├── datasets/
@@ -155,7 +155,7 @@ project-root/
 │
 └── README.md
 
----
+
 
 ## 🚦 Phase Status
 
@@ -170,7 +170,7 @@ project-root/
 | Phase 5 | Literature review, novelty positioning | ✅ Complete |
 | Manuscript | Methods, Results, Abstract drafted; Discussion/Conclusion pending | 🔜 In progress |
 
----
+--
 
 ## 📊 Key Results Summary
 
