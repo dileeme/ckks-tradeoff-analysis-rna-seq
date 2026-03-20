@@ -11,11 +11,6 @@
 #
 # Output:
 #   results/limma_validation_results.csv  — gene-level comparison
-#   Prints overlap % to console for copy-paste into paper
-#
-# Install packages if needed:
-#   install.packages("BiocManager")
-#   BiocManager::install(c("limma", "edgeR"))
 # ============================================================
 
 library(limma)
