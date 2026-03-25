@@ -1,5 +1,5 @@
 model,scheme,pmd,x_var,y_var,slope,intercept,R2,p_value,n_points,equation
-M1_enc_vs_samples,BFV,4096,samples,enc_latency_ms,1.243522,6.2618,0.996685,4e-06,6,y = 1.244·x + 6.26
+M1_enc_vs_samples,BFV,4096,samples,enc_latency_ms,1.243522,6.2618,0.996685,4e-06,6,y = 1.244·x + 6.2
 M1_enc_vs_samples,BFV,8192,samples,enc_latency_ms,3.467483,78.3659,0.996928,4e-06,6,y = 3.467·x + 78.37
 M1_enc_vs_samples,BFV,16384,samples,enc_latency_ms,12.168776,-137.7498,0.996063,6e-06,6,y = 12.169·x + -137.75
 M1_enc_vs_samples,CKKS,8192,samples,enc_latency_ms,4.644089,23.7849,0.999114,0.0,6,y = 4.644·x + 23.78
